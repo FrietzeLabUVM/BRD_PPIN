@@ -1,0 +1,164 @@
+---
+title: "Graph_Analysis.Rmd"
+author: "Cong Gao"
+date: "2/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Graph & Statistical Analysis
+```{r load data}
+setwd("/slipstream/home/conggao/BRD_interaction/Interactions_2021/")
+load("/slipstream/home/conggao/BRD_interaction/Interactions_2021/Human_Physical_Interaction.RData") #updated on 05/20/2021
+
+```
+
+# Including Statistical Inference
+## Overview on two groups
+```{r}
+boxplot(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD)
+hist(Human_unweighted_nodes$degree[Human_unweighted_nodes$BRD==1], main = "Histogram of BRDs' Degree", xlab = "Degree")
+mean(Human_unweighted_nodes$degree); median(Human_unweighted_nodes$degree)
+by(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD, mean)
+by(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD, median)
+```
+```{r}
+library(ggplot2)
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=degree, color=factor(BRD))) +
+  geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+```
+
+
+```{r}
+hist(Human_unweighted_nodes$degree)
+degree_df <- as.data.frame(table(Human_unweighted_nodes$degree))
+max(Human_unweighted_nodes$degree)
+plot(degree_df$Var1, degree_df$Freq)
+```
+
+```{r}
+library(igraph)
+fit1 <- fit_power_law(Human_unweighted_nodes$degree+1)
+fit1$KS.p
+```
+
+## t-tests(including var.test to check the equality of variances)
+### degree
+```{r}
+var.test( degree ~ BRD, data=Human_unweighted_nodes) # p<0.05, not equal
+t.test(degree ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+```
+
+```{r}
+boxplot(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD)
+by(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD, length)
+by(Human_unweighted_nodes$degree, Human_unweighted_nodes$BRD, mean)
+var.test( degree ~ BRD, data=Human_unweighted_nodes) # p<0.05, not equal
+t.test(degree ~ BRD, data=Human_unweighted_nodes, alternative="less", var.equal=FALSE, conf.level=0.95, paired=FALSE)
+```
+
+### hub score
+```{r}
+var.test(hub_score ~ BRD, data=Human_unweighted_nodes) #p<0.05, not equal
+t.test(hub_score ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE)
+wilcox.test(hub_score ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", conf.level=0.95, paired=FALSE)
+```
+### clustering coefficients
+```{r}
+#boxplot(Human_unweighted_nodes$clust_coef, Human_unweighted_nodes$BRD)
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=clust_coef, color=factor(BRD))) +
+  geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+var.test(clust_coef ~ BRD, data=Human_unweighted_nodes) #p<0.05, not equal
+t.test(clust_coef ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+
+```
+### K core
+```{r}
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=Kcore, color=factor(BRD))) +
+  geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+var.test(Kcore ~ BRD, data=Human_unweighted_nodes) #p<0.05, equal
+t.test(Kcore ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+#wilcox.test(Kcore ~ BRD, data=Human_unweighted_nodes, alternative="less", conf.level=0.95, paired=FALSE)
+km <- mean(Human_unweighted_nodes$Kcore)
+table(Human_unweighted_nodes$Kcore>=km, Human_unweighted_nodes$BRD)
+chisq.test(table(Human_unweighted_nodes$Kcore>=49, Human_unweighted_nodes$BRD)) #may not need this!
+```
+```{r}
+#library(vcd)
+#BRD_unweighted_nodes$Kcore_size="small" #BRD_unweighted_nodes$Kcore_size[BRD_unweighted_nodes$Kcore>=47]="big"
+# mosaic(~ BRD + Kcore_size,
+#        direction = c("v", "h"),
+#        data = BRD_unweighted_nodes,
+#        shade = TRUE) #need to edit Kcore_size
+mosaicplot(table(BRD_unweighted_nodes$BRD, BRD_unweighted_nodes$Kcore_size),
+  color = TRUE,
+  main = "K Decompositon of BRD Interaction Network",
+  xlab = "Interactors", # label for x-axis
+  ylab = "K core value")
+```
+### Betweenness
+```{r}
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=betweenness, color=factor(BRD))) +
+  geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+#wilcox.test(betweenness ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", conf.level=0.95, paired=FALSE)
+#by(Human_unweighted_nodes$betweenness, Human_unweighted_nodes$BRD, mean)
+#by(Human_unweighted_nodes$betweenness, Human_unweighted_nodes$BRD, median)
+var.test(betweenness ~ BRD, data=Human_unweighted_nodes) #not equal
+t.test(betweenness ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+```
+### Eigen Centrality
+```{r}
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=eigen_centrality, color=factor(BRD))) +geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+# boxplot(BRD_unweighted_nodes$eigen_centrality, BRD_unweighted_nodes$BRD)
+# wilcox.test(eigen_centrality ~ BRD, data=BRD_unweighted_nodes, alternative="two.sided", conf.level=0.95, paired=FALSE)
+# by(BRD_unweighted_nodes$eigen_centrality, BRD_unweighted_nodes$BRD, mean)
+# by(BRD_unweighted_nodes$eigen_centrality, BRD_unweighted_nodes$BRD, median)
+var.test(eigen_centrality ~ BRD, data=Human_unweighted_nodes)
+t.test(eigen_centrality ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+```
+
+### Closeness
+```{r}
+p<-ggplot(Human_unweighted_nodes, aes(x=factor(BRD), y=closeness, color=factor(BRD))) +geom_boxplot()
+p+scale_color_brewer(palette="Dark2")
+var.test(closeness ~ BRD, data=Human_unweighted_nodes) #not equal
+t.test(closeness ~ BRD, data=Human_unweighted_nodes, alternative="two.sided", var.equal=FALSE, conf.level=0.95, paired=FALSE) 
+```
+
+### K core percentage for BRDs
+```{r}
+a = as.data.frame(prop.table(table(BRD_unweighted_nodes$Kcore, BRD_unweighted_nodes$BRD), 1))
+a =a[c(99:196),]
+a$Var2=NULL
+colnames(a) = c("K_core", "BRD_Percentage")
+plot(a$K_core, a$BRD_Percentage)
+hist(a$BRD_Percentage)
+```
+### Backup code
+```{r}
+# boxplot(BRD_unweighted_nodes$closeness, BRD_unweighted_nodes$BRD)
+# by(BRD_unweighted_nodes$closeness, BRD_unweighted_nodes$BRD, mean)
+# by(BRD_unweighted_nodes$closeness, BRD_unweighted_nodes$BRD, median)
+# wilcox.test(closeness ~ BRD, data=BRD_unweighted_nodes, alternative="two.sided", conf.level=0.95, paired=FALSE)
+```
+
+### Test for power law distribution, don't do this
+```{r}
+# library(poweRlaw)
+# #data <- BRD_unweighted_nodes$degree
+# data <- degree_df$Freq
+# data_pl <- displ$new(data)
+# est <- estimate_xmin(data_pl)
+# est$KS
+# data_pl$setXmin(est)
+# bs <- bootstrap_p(data_pl)
+# bs$p
+```
